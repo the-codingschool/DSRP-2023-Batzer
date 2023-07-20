@@ -64,7 +64,6 @@ germany_data = tidy_carbon |>
   filter(country == "Germany")
 View(germany_data)
 
-# Plotting the data ####
 
 
                         
