@@ -59,10 +59,10 @@ uk_data = tidy_carbon |>
   filter(country == "United Kingdom")
 View(uk_data)
 
-#Germany
-germany_data = tidy_carbon |>
-  filter(country == "Germany")
-View(germany_data)
+#France
+france_data = tidy_carbon |>
+  filter(country == "France")
+View(france_data)
 
 
 
