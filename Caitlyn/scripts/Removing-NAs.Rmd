@@ -1,0 +1,72 @@
+```{r}
+library(ggplot2)
+library(dplyr)
+carbon <- read.csv("carbon-monitor.csv")
+file.exists("carbon-monitor.csv")
+country <- carbon$country
+date <- carbon$date
+sector <- carbon$sector
+value <- carbon$value
+timestamp <- carbon$timestamp
+
+unique(carbon$sector)
+
+filter(carbon, country == "Austria", between(date, "06/08/21", "15/08/21"), sector == "Power")
+filter(carbon, value == "0")
+class(timestamp)
+class(sector)
+str
+
+mean(carbon$value)
+class(carbon$timestamp)
+
+as.numeric(timestamp)
+
+
+## Replacing 0's ####
+
+# Austria Power: 06/08/2021 - 15/08/2021 replaced by 16/08/21 - 25/08/2021 Mean
+AustriaPowerMean <- carbon |>
+  filter(country == "Austria" & sector == "Power" & between(timestamp, 1629068400, 1629846000)) |>
+  summarize(mean_value = mean(value)) |>
+  pull(mean_value)
+
+# Austria Industry: 06/08/2021 - 13/08/2021 replaced by 14/08/2021 - 21/08/2021 Mean
+AustriaIndustryMean <- carbon |>
+  filter(country == "Austria" & sector == "Industry" & between(timestamp, 1628895600, 1629500400)) |>
+  summarize(mean_value = mean(value)) |>
+  pull(mean_value)
+
+
+
+## Testing to see if conditions are met to replace the 0 value with the mean from the days after
+carbonNew <- carbon %>%
+  mutate(value = ifelse(country == "Austria" & sector == "Power" & value == 0, AustriaPowerMean,
+                        ifelse(country == "Austria" & sector == "Industry" & value == 0, AustriaIndustryMean, value)))
+
+
+
+# Quality Control
+testing <- filter(carbonNew, country == "Latvia",
+                             sector == "Power", value == "0")
+
+latvia_data <- carbon %>%
+  filter(country == "Latvia") %>%
+  select(sector, value)
+ggplot(latvia_data, aes(x = sector, y = value)) +
+  geom_jitter() +
+  labs(x = "Sector", y = "Emissions", title = "Carbon Emissions from Different Sectors in Latvia")
+
+```
+
+#### Notes
+
+-   Which 0's should I not remove?
+
+    -   Latvia Industry
+
+    -   Luxembourg Domestic Aviation January 2019, a lot of 2022
+
+-   Latvia data is insignificant
+
+-   EU27 & UK data
