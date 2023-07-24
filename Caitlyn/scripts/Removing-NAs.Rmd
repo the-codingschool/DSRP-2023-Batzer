@@ -39,11 +39,16 @@ AustriaIndustryMean <- carbon |>
 
 
 
-## Testing to see if conditions are met to replace the 0 value with the mean from the days after
-carbonNew <- carbon %>%
+## New dataset that removes 0's and EU27 & UK
+carbonNew <- carbon |>
+  filter(country != "EU27 & UK") |>
   mutate(value = ifelse(country == "Austria" & sector == "Power" & value == 0, AustriaPowerMean,
                         ifelse(country == "Austria" & sector == "Industry" & value == 0, AustriaIndustryMean, value)))
 
+## Seperating into years
+carbon2019 <- filter(carbonNew, timestamp <= "1577750400")
+
+filter(carbonNew, timestamp >= "1577750400")
 
 
 # Quality Control
@@ -59,6 +64,54 @@ ggplot(latvia_data, aes(x = sector, y = value)) +
 
 ```
 
+```{r}
+## Population Density ####
+density <- read.csv("population-density.csv")
+library("dplyr")
+location <- density$Location
+
+filter(newDensity, location == "World")
+
+densityNew <- density |>
+  na.omit() |>
+  filter(density$Location != "World")
+
+?if_any
+tester <- density %>%
+  filter(if_any(everything(), ~ !is.na(.x)))
+
+filter(density, location == "Croatia")
+
+newDensity <- density %>%
+  select(location, everything())
+```
+
+```{r}
+## Playing around with plots
+
+ggplot(carbonNew, aes(x = country, y = value)) +
+  geom_count() +
+  theme_minimal()
+
+ggplot(carbon2019, aes(x = country, y = value)) + 
+  geom_count() +
+  theme_minimal()
+?heatmap
+
+carbonNew |>
+  filter(country %in% c("Austria", "Germany", "Luxembourg", "Belgium", "France")) |>
+  ggplot(aes(x = country, y = sector, fill = value)) +
+  geom_tile() +
+  labs(x = "Country", y = "Variable", title = "Heatmap of Different Values for Selected Countries") +
+  scale_fill_viridis_c()  # Adjust the color scale if needed
+```
+
+```{r}
+## Timetables
+library(lubridate)
+parse_date_time
+```
+
 #### Notes
 
 -   Which 0's should I not remove?
@@ -70,3 +123,29 @@ ggplot(latvia_data, aes(x = sector, y = value)) +
 -   Latvia data is insignificant
 
 -   EU27 & UK data
+
+-   Why is it only European countries
+
+-   What units is values in
+
+-   Good dataset for population density
+
+What role does population density have on different facets of carbon emissions?
+
+-   Look into density of neighboring countries
+
+-   neighboring small countries emissions might be impacted by larger countries
+
+    -   sharing resources
+
+-   some sectors might not scale to population density
+
+    -   take into account geographic region
+
+    -   locate largest carbon emission place
+
+        -   ex. large international aviation in germany
+
+            -   does nearby international aviation decrease while ground transport increases?
+
+            -   
