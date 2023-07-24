@@ -21,12 +21,12 @@ Eu_co2 <- mutate(Eu_co2, year = format(as.POSIXct(Eu_co2$timestamp, origin = "19
 
 View(Eu_co2)
 ###########################################################################
-## Makig plot for lightining talk ####
+## creating  plot for lightning talk ####
 
 
-#  (seperate) plots 4 date 
+#(Separate) plots 4 date 
 
-# 2019 
+# 2019 emission plot 
 
 neo_2019 = Eu_co2 |>
   filter(timestamp < 1577836801)
@@ -41,7 +41,7 @@ ggplot( data = neo_2019, aes( x = sector, y = value, fill = sector)) +
   theme_minimal()
 
 
-# 2020
+# 2020 emissions plot 
 
 neo_2020 = Eu_co2 |>
   filter(between(timestamp, 1577836801, 1609372801))
@@ -70,7 +70,7 @@ ggplot( data = neo_2021, aes( x = sector, y = value, fill = sector)) +
   ) + 
   theme_minimal()
 
-#2022 
+#2022 emission plot
 
 neo_2022 = Eu_co2 |>
   filter(between(timestamp, 1640908801, 1672444801))
@@ -84,7 +84,7 @@ ggplot( data = neo_2022, aes( x = sector, y = value, fill = sector)) +
   ) + 
   theme_minimal()
 
-# 2023 
+# 2023 emission plot (DATA VERY SMALL IN COMPARISON)
 neo_2023 = Eu_co2 |>
   filter(timestamp > 1672444801)
 
@@ -97,9 +97,9 @@ ggplot( data = neo_2023, aes( x = sector, y = value, fill = sector)) +
   ) + 
   theme_minimal()
 
-## ALL YEAR EMISSIONS 
+## Emission plot comparing all years 
 
-
+# removing the UK from the data set 
 no_uk_carbon = Eu_co2 |> 
   filter(country != "United Kingdom")
 

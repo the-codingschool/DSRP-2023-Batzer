@@ -12,6 +12,10 @@ library(tidyr)
 library(janitor)
 library(dplyr)
 library(ggplot2)
+library(ranger)
+library(reshape2)
+library(yardstick)
+library(Metrics)
 
 ###########################################################################
 #info about data set ####
@@ -46,7 +50,7 @@ tidy_carbon$date = as.character(tidy_carbon$date)
 
 class(Eu_co2$date)
 
-# turning timestamp into a numeric class
+# turning time stamp into a numeric class
  tidy_carbon$timestamp = as.numeric(tidy_carbon$timestamp)
  Eu_co2$timestamp = as.numeric(Eu_co2$timestamp)
  class(tidy_carbon$timestamp)
@@ -108,18 +112,12 @@ View(data_2023)
 
 # Tile plot 
 
+# making all data in the data frame numeric 
 all_numeric_carbon = Eu_co2 |> 
   pivot_wider(
     names_from = sector,
     values_from = value
-  ) |>
-  mutate(
-    country = as.integer(Eu_co2$country)
-  ) |> 
-  select(
-    
   )
   
 
-
-
+  
