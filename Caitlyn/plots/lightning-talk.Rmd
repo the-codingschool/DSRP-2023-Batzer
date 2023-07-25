@@ -1,0 +1,223 @@
+```{r}
+## Install csv's and libraries ####
+carbonAll <- read.csv("carbon-all.csv")
+library(ggplot2)
+library(dplyr)
+library(geosphere)
+```
+
+```{r}
+## Sorting which countries emit more emissions in 2022####
+carbonAll
+
+## Shows total emissions by country for year 2022
+carbon2022 <- carbonAll |>
+  group_by(country, latitude, longitude, population, year) |>
+  summarize(emissions = sum(value)) |>
+  filter(year == "2022")
+
+## Total Emissions by Country for 2022
+ggplot(carbon2022, aes(x = reorder(country, -emissions), y = emissions)) +
+  geom_bar(stat = "identity", fill = "deepskyblue4") +
+  labs(x = "Country", y = "Total Emissions", title = "Total Emissions by Country for 2022") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Large 6 countries are Germany, United Kingdom, Italy, Poland, France, and Spain
+```
+
+```{r}
+## Iterating through datasets to find distance between all big and small countries
+
+
+distanceDF2022 <- data.frame()
+
+## Grouping into amount of emission by country
+carbonBig2022 <- carbon2022 |>
+  filter(emissions > 200)
+
+carbonSmall2022 <- carbon2022 |>
+  filter(emissions < 200)
+
+# Loop through carbonBig
+for (i in 1:nrow(carbonBig2022)) {
+  high_country_2022 <- carbonBig2022[i, c("country", "latitude", "longitude")]
+  
+  # Loop through carbonSmall
+  for (j in 1:nrow(carbonSmall2022)) {
+    low_country_2022 <- carbonSmall2022[j, c("country", "latitude", "longitude")]
+    
+
+      # Calculates distance between each country, distHaverstine finds distance between points
+      distance <- distHaversine(c(high_country_2022$longitude, high_country_2022$latitude),
+                                c(low_country_2022$longitude, low_country_2022$latitude))
+      
+      # Add the distance and country info into to the distanceDF2022
+      distanceDF2022 <- rbind(distanceDF2022, c(high_country_2022$country, low_country_2022$country, distance))
+
+  }
+}
+## Renames column names and converts m to km
+distancesTotal2022 <- distanceDF2022 |>
+  rename(high_emission_country = X.France., 
+         low_emission_country = X.Austria.,
+         distance_km = X.1034712.20285896.) |>
+  mutate(distance_km = as.numeric(distance_km)) |>
+  mutate(distance_km = distance_km / 1000)
+```
+
+```{r}
+## Plots
+# Merges the datasets so the emissions of the low emission country is represented in the same row as the distance between it and each high emission country
+carbonMerged2022 <- merge(distancesTotal2022, carbon2022, by.x = "low_emission_country", by.y = "country", all.x = TRUE)
+
+# Only includes closest high emission country for each low emission country
+closestPoints2022 <- carbonMerged2022 |>
+  group_by(low_emission_country) |>
+  filter(distance_km == min(distance_km)) |>
+  ungroup()
+
+# Checking for outliers
+lowerDistance2022 <- mean(closestPoints2022$distance_km) - 3*sd(closestPoints2022$distance_km) # -482.6767
+upperDistance2022 <- mean(closestPoints2022$distance_km) + 3*sd(closestPoints2022$distance_km) # 1772.592
+# Any value above 1772.592 km is an outlier. 
+lowerEmission2022 <- mean(closestPoints2022$emissions) - 3*sd(closestPoints2022$emissions) # -66.34024
+upperEmission2022 <- mean(closestPoints2022$emissions) + 3*sd(closestPoints2022$emissions) # 155.2856
+
+# Creating new dataset without outliers
+filteredClosest2022 <- closestPoints2022 |>
+  filter(distance_km >= lowerDistance2022,
+         distance_km <= upperDistance2022,
+         emissions >= lowerEmission2022,
+         emissions <= upperEmission2022)
+
+# linear regression model
+lm_model2022 <- lm(emissions ~ distance_km, data = filteredClosest2022)
+
+r_squared <- summary(lm_model2022)$r.squared
+
+ggplot(filteredClosest2022, aes(x = distance_km, y = emissions)) + 
+  geom_point(alpha = 0.7, color = "darkgreen") +  # Add transparency and change point color
+  geom_smooth(method = "lm", se = FALSE, color = "deepskyblue4", size = 1.5) +
+  labs(x = "Distance Away from a High Carbon Emitting Country (km)",
+       y = "Total Emissions of Low Carbon Emitting Country",
+       title = "Distance from High Emission Country vs. Emissions of Low Emission Countries",
+       subtitle = "Data for the Year 2022",
+       caption = "Source: Carbon Monitor") + 
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        plot.caption = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))
+```
+
+```{r}
+## Emissions for all years ####
+
+## Shows total emissions by country 
+carbonTotal <- carbonAll |>
+  group_by(country, latitude, longitude, population, year) |>
+  summarize(emissions = sum(value))
+
+## Total Emissions by Country
+ggplot(carbonTotal, aes(x = reorder(country, -emissions), y = emissions)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Country", y = "Total Emissions", title = "Total Emissions by Country") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Large 6 countries are Germany, United Kingdom, Italy, Poland, France, and Spain
+
+
+distanceDF <- data.frame()
+
+## Grouping into amount of emission by country
+carbonBig <- carbonTotal |>
+  filter(emissions > 200)
+
+carbonSmall <- carbonTotal |>
+  filter(emissions < 200)
+
+# Loop through carbonBig
+for (i in 1:nrow(carbonBig)) {
+  high_country <- carbonBig[i, c("country", "latitude", "longitude")]
+  
+  # Loop through carbonSmall
+  for (j in 1:nrow(carbonSmall)) {
+    low_country <- carbonSmall[j, c("country", "latitude", "longitude")]
+    
+
+      # Calculates distance between each country, distHaverstine finds distance between points
+      distance <- distHaversine(c(high_country$longitude, high_country$latitude),
+                                c(low_country$longitude, low_country$latitude))
+      
+      # Add the distance and country info into to the distanceDF2022
+      distanceDF <- rbind(distanceDF, c(high_country$country, low_country$country, distance))
+
+  }
+}
+## Renames column names and converts m to km
+distancesTotal <- distanceDF |>
+  rename(high_emission_country = X.France., 
+         low_emission_country = X.Austria.,
+         distance_km = X.1034712.20285896.) |>
+  mutate(distance_km = as.numeric(distance_km)) |>
+  mutate(distance_km = distance_km / 1000)
+
+
+
+## Plots
+# Merges the datasets so the emissions of the low emission country is represented in the same row as the distance between it and each high emission country
+carbonMerged <- distancesTotal |>
+  merge(carbonTotal, by.x = "high_emission_country", by.y = "country", all.x = TRUE) |>
+  distinct()
+
+
+# Only includes closest high emission country for each low emission country
+closestPoints <- carbonMerged |>
+  group_by(low_emission_country) |>
+  filter(distance_km == min(distance_km)) |>
+  ungroup()
+
+# Checking for outliers
+lowerDistance <- mean(closestPoints$distance_km) - 3*sd(closestPoints$distance_km) # --463.0642
+upperDistance <- mean(closestPoints$distance_km) + 3*sd(closestPoints$distance_km) # 1752.979
+# Any value above 1772.592 km is an outlier. 
+lowerEmission <- mean(closestPoints$emissions) - 3*sd(closestPoints$emissions) # -39.23332
+upperEmission <- mean(closestPoints$emissions) + 3*sd(closestPoints$emissions) # 795.7706
+
+# Creating new dataset without outliers
+filteredClosest <- closestPoints |>
+  filter(distance_km >= lowerDistance,
+         distance_km <= upperDistance,
+         emissions >= lowerEmission,
+         emissions <= upperEmission)
+
+# linear regression model
+lm_model <- lm(emissions ~ distance_km, data = filteredClosest)
+
+r_squared <- summary(lm_model)$r.squared
+
+ggplot(filteredClosest, aes(x = distance_km, y = emissions, group = year, color = year)) + 
+  geom_point() + 
+  geom_smooth()
+  labs( x = "Distance Away from a High Carbon Emitting Country in km",
+        y = "Emissions of Low Carbon Emitting Country",
+        title = "Distance from High Emission Country vs. Emissions of Low Emission Countries") 
+  
+
+ggplot(filteredClosest, aes(x = distance_km, y = emissions, group = year, color = year)) + 
+  geom_point(alpha = 0.7, color = "darkgreen") +  # Add transparency and change point color
+  geom_smooth(method = "lm", se = FALSE, color = "deepskyblue4", size = 1.5) +
+  labs(x = "Distance Away from a High Carbon Emitting Country (km)",
+       y = "Total Emissions of Low Carbon Emitting Country",
+       title = "Distance from High Emission Country vs. Emissions of Low Emission Countries",
+       caption = "Source: Carbon Monitor") + 
+  theme_minimal() +
+  theme(plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        plot.caption = element_text(size = 10),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))
+```
