@@ -193,6 +193,11 @@ ggplot(carbon_corrs, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
   scale_fill_gradient2(low = "green", high = "blue", mid = "white", midpoint = 0)
 
+## Calculating 1990 emissions ####
+# 2019 is 25% less than 1990 
+
+total_em_2019 = sum(neo_2019$value)
+Goal_2030 = total_em_2019 - (total_em_2019 *.3) # 2030 target is in the 4573.9435 ballpark! 
 
 
 
