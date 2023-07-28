@@ -199,6 +199,13 @@ ggplot(carbon_corrs, aes(x = Var1, y = Var2, fill = value)) +
 total_em_2019 = sum(neo_2019$value)
 Goal_2030 = total_em_2019 - (total_em_2019 *.3) # 2030 target is in the 4573.9435 ballpark! 
 
+######## use rbind() to combine 2 different data frames 
+
+### use code below to make a data frame all at once
+test = data.frame(mae = c(mae(acutal, predicted), mae(acutal, predicted2)),
+                  rmse = c(rmse(acutal, predicted), rmse (actual, predicted2)),
+                  modelType = c("randForest", "boostTree"))
+
 
 
   
