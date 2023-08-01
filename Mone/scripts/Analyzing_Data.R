@@ -84,7 +84,8 @@ tot_dom = c(sum(filter(filter(Eu_co2, year == "2019"), sector == "Domestic Aviat
 #total International Aviation emissions 
 tot_int = c(sum(filter(filter(Eu_co2, year == "2019"), sector == "International Aviation")$value),
             sum(filter(filter(Eu_co2, year == "2021"), sector == "International Aviation")$value),
-            sum(filter(filter(Eu_co2, year == "2022"), sector == "International Aviation")$value))
+            sum(filter(filter(Eu_co2, year == "2022"), sector == "International Aviation")$value)) 
+
 
 
 # all 3 years data                  
@@ -142,7 +143,7 @@ lm_fit_2 = linear_reg() |>
   set_mode("regression") |> 
   fit(total_em ~ year + Power + Industry + ., data = reg_train_2)
 
-lm_fit_2
+predlm_fit_2
 summary(lm_fit_2)
 
 
@@ -150,9 +151,93 @@ summary(lm_fit_2)
 boost_reg_fit = boost_tree() |>
   set_engine("xgboost") |> 
   set_mode("regression") |> 
-  fit(Sepal.Length ~ ., data = reg_train)
+  fit(emissions ~ year + power + Industry + ., data = reg_train)
+
+
+# data set 2 
+boost_reg_fit_2 = boost_tree() |>
+  set_engine("xgboost") |> 
+  set_mode("regression") |> 
+  fit(total_em ~ year + Power + Industry + ., data = reg_train_2)
+
 
 
 ### Evaluation 
 reg_results = reg_test # Data set 1 
 reg_results_2 = reg_test_2 # Data set 2 
+
+
+# accuracy calculations for data set 1 
+reg_results$lm_pred = predict(lm_fit, reg_test)$.pred
+reg_results$boost_pred = predict(boost_reg_fit, reg_test)$.pred
+
+yardstick::mae(reg_results, emissions, lm_pred)
+yardstick::mae(reg_results, emissions, boost_pred)
+
+yardstick::rmse(reg_results, emissions, lm_pred)
+yardstick::rmse(reg_results, emissions, boost_pred)
+
+# accuracy for data set 2 
+reg_results_2$lm_pred = predict(lm_fit_2, reg_test_2)$.pred
+reg_results_2$boost_pred = predict(boost_reg_fit_2, reg_test_2)$.pred
+
+yardstick::mae(reg_results_2, total_em, lm_pred)
+yardstick::mae(reg_results_2, total_em, boost_pred)
+
+yardstick::rmse(reg_results_2, total_em, lm_pred_2)
+yardstick::rmse(reg_results_2, total_em, boost_pred_2)
+
+
+### ALTERNATIVE PREDICTION MODEL 
+
+
+
+### Graphing Results ####
+
+# making the table longer 
+data_set_2_results = reg_results_2 |>
+  pivot_longer(
+    cols = c(`total_em`, `lm_pred`, `boost_pred`),
+    names_to = "data_type", 
+    values_to = "values"
+  )
+
+# scatter ploting the data 
+# DATA SET 2 - LINEAR REG 
+ggplot(data = reg_results_2, aes( x = reg_results_2$total_em, y = reg_results_2$lm_pred)) + 
+  geom_point() + 
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
+  labs(
+    title = "Linear Regression accuracy",
+    x = "Acutal Total Emissions",
+    y = "Linear Regression predicted Emissions"
+  ) +
+  theme_minimal()
+
+#DATA SET 2 - BOOSTED TREEE 
+ggplot(data = reg_results_2, aes (x = reg_results_2$total_em, y = reg_results_2$boost_pred))+
+  geom_point() +
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) + 
+  theme_minimal() +
+  labs(
+    title = "Boosted Tree accuracy",
+    x = "Acutal Total Emissions",
+    y = "Boosted Tree predicted Emissions"
+  )
+
+
+### mae & rmse  comparisons (change the axis a bit )
+
+model_type = c("linear reg", "boosted tree")
+Data_set_1_mae = c( 300, 293)
+Data_set_2_mae = c(4.02e-15, 0.0127 ) 
+Data_set_1_rmse = c( 300, 293)
+Data_set_2_rmse = c(6.90e-15, 0.0313 )
+model_comparison = data.frame(model_type, Data_set_1_mae, Data_set_2_mae, Data_set_1_rmse, Data_set_2_rmse)
+
+
+
+### Try to predict based on:  lm(emissions ~ month_of_year + year)
+#### predict(linear_model, newdf = [all_months, years out to 2030])
+## Do maybe a statiscal test best on the number of confidence to get hte likelhood 
+# WHAT IS THE PROBILITY THAT WE ARE GOING TO BE OVER THE GOAL, BASED ON THE STATISCAL NOISE
