@@ -347,8 +347,8 @@ highpercentcoors <- numerichighpercent |>
 
 ggplot(highpercentcoors,aes(x= Var1, y = Var2,fill=value))+
   geom_tile()+
-  scale_fill_gradient2(low = "orange", high = "white", mid = "black",
-                                              midpoint = 0)
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white",
+                                              midpoint = 0.85)
 
 # low percent
 numericlowpercent <- select(lowpercentcountries, -c(country,date,timestamp))
@@ -367,4 +367,3 @@ ggplot(lowpercentcoors,aes(x= Var1, y = Var2,fill=value))+
 # have more correlation with each other overall
 # whereas in the lower ones there is less correlation between the variables
 
-# Note: ADD LABELS TO THE PLOTS
