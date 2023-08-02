@@ -1,0 +1,143 @@
+# The effects of increased fossil fuel emissions on other sectors
+
+### Justin Huang
+
+## Abstract
+
+Problem: How does the amount of power emissions impact other sectors and the overall layout of emissions. This question is interesting because it can help show which sectors are connected with other ones and how changes in one has ripple effects on the others
+
+Approach: Made each sector into its own column and divided the dataset into half based on its power emissions (either from per person emissions of percent of total emissions). Then I did t-tests and correlation charts to see what variables had the most correlation with power
+
+Results: I found that for high emissions countries the means of the industry, ground transport and residential sectors also increase dramatically while for the low emitting countries the emission values were more even. Domestic and international aviation on the other hand weren't affected by power but were correlated with each other. Meanwhile for the low emissions countries there weren't many strong correlations between the sectors. Whereas for the high emissions there were many correlations above .9, for the low emissions many of the correlations were at .80, .70 or below.
+
+Conclusion: My main findings are that the power sector has a large correlation with the ground transport and industry sectors. In countries that have higher power emissions there is a noticable spike in ground transport and industry emissions, showing that when people use more power they also emit more producing goods and transporting those goods and people. Meanwhile for the countries that didn't emit as much there weren't that many high correlations so the spread of emissions was a lot more even.
+
+## Background
+
+Background: The 27 countries of the EU plus the United Kingdom have been world leaders in renewable energy. However, they still have considerable emissions, some more than others. The varying countries differ in the amount of emissions and type. Some are more apparent like Frances acceptance for nuclear energy vs Germany's reluctance while others are less so. Overall though, power seems to be a leading type of emission. Because of the different power emissions between countries, it begs the question of how power emissions impact the emissions of other sectors.
+
+Research question: How does increased power emissions impact the amount of emissions for other sectors and the overall spread of emissions
+
+Hypothesis: Increased power emissions will lead to increased emissions across all sectors
+
+## Results
+
+```{r}
+# importing libraries
+library(tidyr)
+library(parsnip)
+library(rsample)
+library(yardstick)
+library(dplyr)
+library(rsample)
+library(xgboost)
+library(ranger)
+library(Metrics)
+library(reshape2)
+
+```
+
+```{r}
+numerichighsector <- select(highsectordata, -c(country,date,timestamp))
+cor(numerichighsector)
+
+highsectorcoors <- numerichighsector |>
+  cor()|>
+  melt()|>
+  as.data.frame()
+
+ggplot(highsectorcoors,aes(x= Var1, y = Var2,fill=value))+
+  geom_tile()+
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white",
+                       midpoint = 0.85)+
+  labs(title= "Correlation between sectors for high emitting countries (per person)")+
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+This plot shows the correlation between the different sectors for countries that emit higher amounts per person. One noticeable thing is that power, industry and ground transport are all heavily correlated with each other while both the aviations (domestic and international) are correlated with each other. Out of all the variables, residential seems to be the least correlated with the other sectors, noticeably having a lower correlation with the 2 aviations
+
+```{r}
+numericlowsector <- select(lowsectordata, -c(country,date,timestamp))
+cor(numericlowsector)
+
+lowsectorcoors <- numericlowsector |>
+  cor()|>
+  melt()|>
+  as.data.frame()
+
+ggplot(lowsectorcoors,aes(x= Var1, y = Var2,fill=value))+
+  geom_tile()+
+  scale_fill_gradient2(low = "red", high = "blue",mid = "white",
+                       midpoint = 0.85)+
+  labs(title = "Correlation between sectors for low emitting countries (per person)")+
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+This plot shows the correlation between the sectors for the countries that emit lower amounts per person. Compared to the high emitting countries this plot looks a lot messier and there are barely any sectors that are highly correlated with each other. compared to the high emissions, this plot is more spread out and there isn't that many noticeable spots of high or low correlation
+
+```{r}
+numerichighpercent <- select(highpercentcountries, -c(country,date,timestamp))
+cor(numerichighpercent)
+
+highpercentcoors <- numerichighpercent |>
+  cor()|>
+  melt()|>
+  as.data.frame()
+
+ggplot(highpercentcoors,aes(x= Var1, y = Var2,fill=value))+
+  geom_tile()+
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white",
+                                              midpoint = 0.85)+
+  labs(title = "Correlation between sector for high emitting countries (by percent of total emissions)")+
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+This is the correlation plot for high emitting countries by percent of total emissions. These countries have the highest percentage of total emissions as power. Its very similar to the one earlier which is good news since it shows that the trends I found earlier is consistent.
+
+```{r}
+numericlowpercent <- select(lowpercentcountries, -c(country,date,timestamp))
+cor(numericlowpercent)
+
+lowpercentcoors <- numericlowpercent |>
+  cor()|>
+  melt()|>
+  as.data.frame()
+
+ggplot(lowpercentcoors,aes(x= Var1, y = Var2,fill=value))+
+  geom_tile()+
+  scale_fill_gradient2(low = "red", high = "blue",mid = "white",
+                       midpoint = 0.85)+
+  labs(title = "Correlation between sector for high emitting countries (by percent of total emissions)")+
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+This plot shows the correlations between the sectors for the countries that don't have power as a large percentage of their overall emissions. Like the high emissions plot this is also very similar to the one from earlier which shows that the trends are true here as well.
+
+## Discussion
+
+This supports my original hypothesis somewhat. Although there is a large correlation with ground transportation and industry and somewhat with residential, there is a smaller correlation with domestic and international aviation, which are mostly correlated with each other instead.
+
+From this I can draw the conclusion that when power emissions are high, people also tend to emit more in transportation and industry. Meanwhile domestic aviation and international aviation are mostly related to each other. Although many European countries don't see much domestic aviation, either because of small sizes or policies, those that do see an increase in domestic or international aviation also see growth in the other.
+
+Meanwhile in countries that don't emit much power the spread is a lot more even as shown in the correlation chart. While power still has a correlation with industry, many of the sectors have much less of a correlation with each other compared to high emitting countries.
+
+These trends are true for high and low emitting countries in both tests (per person emissions and percent of total emissions)
+
+Next steps: The carbon monitor website not only has data for Europe but also the world, china, the US, cities, etc etc. I could try doing some analysis on those other datasets to see if the trends I found are consistent across the entire world or mainly just in Europe. I could also try predicting a countries emissions based on some details about them.
+
+## Code and Data Availability
+
+Link to original dataset: <https://eu.carbonmonitor.org/>
+
+Project GitHub repository link: <https://github.com/the-codingschool/DSRP-2023-Batzer/tree/main>
+
+## Acknowledgements
+
+I would like to acknowledge The Coding School for organizing and creating this program
+
+I would like to acknowledge Professor Evan Batzer for helping lead me through my research
+
+I would like to acknowledge Alex Dong for helping me when I had code issues
+
+I would like to acknowledge Sarah Parker for teaching me R skills
