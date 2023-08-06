@@ -107,7 +107,9 @@ ggplot( data = neo_2023, aes( x = sector, y = value, fill = sector)) +
 
 # removing the UK from the data set 
 no_uk_carbon = Eu_co2 |> 
-  filter(country != "United Kingdom")
+  filter(country != "United Kingdom") |>
+  filter(country != "EU27 & UK") |>
+  mutate (year = format(as.POSIXct(Eu_co2$timestamp, origin = "1970-01-02)"), "%Y"))
 
 ggplot( data = no_uk_carbon, aes( x = year, y = value, fill = year)) + 
   geom_bar(stat = "sum", na.rm = FALSE) + 
@@ -117,6 +119,9 @@ ggplot( data = no_uk_carbon, aes( x = year, y = value, fill = year)) +
     x = "Year"
   ) + 
   theme_minimal()
+
+
+ggplot(data = )
 
 # Total emissions data ####
 carbon = Eu_co2 |>
@@ -191,7 +196,8 @@ carbon_corrs = cor(carbon_all_numeric) |>
 # plotting correlations 
 ggplot(carbon_corrs, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile() +
-  scale_fill_gradient2(low = "green", high = "blue", mid = "white", midpoint = 0)
+  scale_fill_gradient2(low = "green", high = "blue", mid = "white", midpoint = 0) +
+  theme_minimal()
 
 ## Calculating 1990 emissions ####
 # 2019 is 25% less than 1990 
@@ -208,4 +214,9 @@ test = data.frame(mae = c(mae(acutal, predicted), mae(acutal, predicted2)),
 
 
 
+### year v total emissions 
+
+ggplot(carbon, aes( x = carbon$timestamp, y = carbon$total_em)) + 
+  geom_point()+
+  geom_smooth(method = lm, color = "lightblue", fill = "lightpink", se=TRUE)
   

@@ -17,6 +17,7 @@ library(yardstick)
 library(Metrics)
 library(rsample)
 library(parsnip)
+library(readr)
 
 ###########################################################################
 
@@ -24,6 +25,12 @@ library(parsnip)
 # Adding Year column 
 Eu_co2 <- mutate(Eu_co2, year = format(as.POSIXct(Eu_co2$timestamp, 
                                                   origin = "1970-01-02)"), "%Y"))
+## Adding Population Data 
+# merge the datasets
+new_carbon = merge(Eu_co2, population, by.x = "country", by.y = "country", all.x = TRUE, all.y = FALSE)
+
+#removing year.y & renaming year.x to year 
+
 
 ## Making numeric data 
 carbon_all_numeric = pivot_wider(Eu_co2, 
@@ -141,10 +148,13 @@ summary(lm_fit)
 lm_fit_2 = linear_reg() |>
   set_engine("lm") |>
   set_mode("regression") |> 
-  fit(total_em ~ year + Power + Industry + ., data = reg_train_2)
+  fit(year ~ Power + Industry + ., data = reg_train_2)
 
-predlm_fit_2
+
 summary(lm_fit_2)
+
+pred_test = filter(reg_results_2, year == 11) 
+predict(lm_fit_2, pred_test)
 
 
 ## Boosted Tree ####
@@ -236,8 +246,9 @@ Data_set_2_rmse = c(6.90e-15, 0.0313 )
 model_comparison = data.frame(model_type, Data_set_1_mae, Data_set_2_mae, Data_set_1_rmse, Data_set_2_rmse)
 
 
-
 ### Try to predict based on:  lm(emissions ~ month_of_year + year)
 #### predict(linear_model, newdf = [all_months, years out to 2030])
-## Do maybe a statiscal test best on the number of confidence to get hte likelhood 
+## Do maybe a statiscal test (maybe NOVA or T-test?) best on the number of confidence to get the likelhood
+# compose a Null and Alternative Hypothesis 
+# Can set up a two-sided t-test ( if I have extra time try a one-sided)
 # WHAT IS THE PROBILITY THAT WE ARE GOING TO BE OVER THE GOAL, BASED ON THE STATISCAL NOISE
