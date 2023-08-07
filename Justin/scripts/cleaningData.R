@@ -11,6 +11,7 @@ library(xgboost)
 library(ranger)
 library(Metrics)
 library(reshape2)
+library(ggplot2)
 
 #need to make this into dataframe first
 carbondata <- as.data.frame(data)

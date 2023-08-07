@@ -112,23 +112,23 @@ t.test(highsectordata$Power,lowsectordata$Power, alternative = "two.sided")
 # x mean is 0.302, y mean is 0.042
 
 t.test(highsectordata$Industry,lowsectordata$Industry, alternative = "two.sided")
-# p value < 2.23-16 
+# p value < 2.2e-16 
 # mean of x is .190, mean of y is 0.053
 # high sector data has noticeably more industry emissions
 # power has a correlation with industry
 
 t.test(highsectordata$`Ground Transport`,lowsectordata$`Ground Transport`, alternative = "two.sided")
 # mean of x is 0.254, mean of y is 0.081
-# p value < 2.23-16
+# p value < 2.2e-16
 # power has a correlation with ground transport
 
 t.test(highsectordata$Residential,lowsectordata$Residential, alternative = "two.sided")
 # mean of x is 0.194, mean of y is 0.050
-# p value <2.23-16
+# p value <2.2e-16
 # power has a correlation with residential
 
 t.test(highsectordata$`Domestic Aviation`,lowsectordata$`Domestic Aviation`, alternative = "two.sided")
-# p value <2.23-16
+# p value <2.2e-16
 # mean of x is 0.002, mean of y is 0.001
 # power does not have a correlation with domestic aviation
 
@@ -199,7 +199,9 @@ highsectorcoors <- numerichighsector |>
 ggplot(highsectorcoors,aes(x= Var1, y = Var2,fill=value))+
   geom_tile()+
   scale_fill_gradient2(low = "red", high = "blue", mid = "white",
-                       midpoint = 0.85)
+                       midpoint = 0.85)+
+  labs(title= "Correlation between sectors for high emitting countries (per person)")+ 
+  theme(axis.text.x = element_text(angle = 90))
 
 # low sector
 numericlowsector <- select(lowsectordata, -c(country,date,timestamp))
@@ -213,7 +215,9 @@ lowsectorcoors <- numericlowsector |>
 ggplot(lowsectorcoors,aes(x= Var1, y = Var2,fill=value))+
   geom_tile()+
   scale_fill_gradient2(low = "red", high = "blue",mid = "white",
-                       midpoint = 0.85)
+                       midpoint = 0.85)+
+  labs(title = "Correlation between sectors for low emitting countries (per person)")+
+  theme(axis.text.x = element_text(angle = 90))
 # note: compared to the high dataset, the correlations for the low dataset
 # are a lot more spread out
 
@@ -366,4 +370,5 @@ ggplot(lowpercentcoors,aes(x= Var1, y = Var2,fill=value))+
 # in both the high percent and high sector datasets, the variables
 # have more correlation with each other overall
 # whereas in the lower ones there is less correlation between the variables
+
 

@@ -1,3 +1,7 @@
+---
+---
+---
+
 # The effects of increased fossil fuel emissions on other sectors
 
 ### Justin Huang
@@ -10,7 +14,7 @@ Approach: Made each sector into its own column and divided the dataset into half
 
 Results: I found that for high emissions countries the means of the industry, ground transport and residential sectors also increase dramatically while for the low emitting countries the emission values were more even. Domestic and international aviation on the other hand weren't affected by power but were correlated with each other. Meanwhile for the low emissions countries there weren't many strong correlations between the sectors. Whereas for the high emissions there were many correlations above .9, for the low emissions many of the correlations were at .80, .70 or below.
 
-Conclusion: My main findings are that the power sector has a large correlation with the ground transport and industry sectors. In countries that have higher power emissions there is a noticable spike in ground transport and industry emissions, showing that when people use more power they also emit more producing goods and transporting those goods and people. Meanwhile for the countries that didn't emit as much there weren't that many high correlations so the spread of emissions was a lot more even.
+Conclusion: My main findings are that the power sector has a large correlation with the ground transport and industry sectors. In countries that have higher power emissions there is a noticeable spike in ground transport and industry emissions, showing that when people use more power they also emit more producing goods and transporting those goods and people. Meanwhile for the countries that didn't emit as much there weren't that many high correlations so the spread of emissions was a lot more even.
 
 ## Background
 
@@ -22,7 +26,11 @@ Hypothesis: Increased power emissions will lead to increased emissions across al
 
 ## Results
 
-```{r}
+Quick note: For each of the results it will show a correlation chart with the numeric values and then also a correlation plot to better visualize the results. you can use whichever one works for you
+
+Another thing to keep in mind is that the correlations of 1 (or the super dark blue boxes in the plots) don't count since those are a sector correlating with itself (like power with power) which doesn't tell us anything except the fact that power is the same as power. It's like saying "123" is the same as "123". Sure, its true, but it doesn't tell us anything new.
+
+```{r include=FALSE}
 # importing libraries
 library(tidyr)
 library(parsnip)
@@ -34,10 +42,80 @@ library(xgboost)
 library(ranger)
 library(Metrics)
 library(reshape2)
-
+library(ggplot2)
 ```
 
-```{r}
+```{r include=FALSE}
+# code to get all of the variables set up
+data <- read.csv("data/carbonmonitor-eu_datas_2023-07-19.csv")
+carbondata <- as.data.frame(data)
+sectordata = pivot_wider(carbondata, 
+                          names_from = sector, 
+                          values_from = value)
+populationdata <- read.csv("C:/Users/jhuan/OneDrive/Documents/DSRP Summer 2023/DSRP-2023-Batzer/Data/worldbank_population_bycountry - data.csv")
+population2022 <- filter(populationdata,year == "2022")
+
+# some of the values are wrong so im going to correct them using the world bank website
+population2022$population[population2022$country == "Croatia"] <- 3854000
+population2022$population[population2022$country == "Cyprus"] <- 1251488
+population2022$population[population2022$country == "Czech Republic"] <- 10526073
+population2022$population[population2022$country == "Denmark"] <- 5903037
+population2022$population[population2022$country == "Greece"] <- 10566531
+population2022$population[population2022$country == "Hungary"] <- 9683505
+population2022$population[population2022$country == "Ireland"] <- 5086988
+population2022$population[population2022$country == "Italy"] <- 58856847
+population2022$population[population2022$country == "Latvia"] <- 1883379
+population2022$population[population2022$country == "Lithuania"] <- 2833000
+population2022$population[population2022$country == "Luxembourg"] <- 650774
+population2022$population[population2022$country == "Malta"] <- 523417
+population2022$population[population2022$country == "Netherlands"] <- 17703090
+population2022$population[population2022$country == "Poland"] <- 37561599
+population2022$population[population2022$country == "Portugal"] <- 10379007
+population2022$population[population2022$country == "Romania"] <- 18956666
+population2022$population[population2022$country == "Slovakia"] <- 5431752
+population2022$population[population2022$country == "Slovenia"] <- 2108732
+population2022$population[population2022$country == "Spain"] <- 47615034
+population2022$population[population2022$country == "Sweden"] <- 10486941
+population2022$population[population2022$country == "United Kingdom"] <- 66971411
+population2022$population[population2022$country == "EU27 & UK"] <- 447956050 + 66971411
+populationalphabetical <- arrange(population2022,country)
+
+powerdata <- filter(carbondata,sector == "Power")
+powersummary <- summarize(powerdata,mean = mean(value),
+                          .by = country)
+poweralphabetical <- arrange(powersummary,country)
+powervalues <- arrange(powersummary,desc(mean))
+
+powermutated <- mutate(poweralphabetical,emissionsperperson = mean/populationalphabetical$population)
+powermutated <- arrange(powermutated,desc(emissionsperperson))
+
+
+powerarranged <- arrange(powersummary,mean)
+
+
+highemissionsdataset <- filter(powermutated,emissionsperperson > 4.00e-09)
+lowemissionsdataset <- filter(powermutated, emissionsperperson < 4.00e-09)
+
+highsectordata <- filter(sectordata,country %in% highemissionsdataset$country)
+lowsectordata <- filter(sectordata,country %in% lowemissionsdataset$country)
+
+powersummary <- summarize(carbondata,sum = sum(value),
+                           .by = c(country,sector))
+powersummary <- filter(powersummary,sector == "Power")
+totalsummary <- summarize(carbondata,sum=sum(value),
+                          .by = country)
+totalsummary <- mutate(totalsummary,powerpercent =
+                         (powersummary$sum/totalsummary$sum)*100)
+percentorganized <- arrange(totalsummary,desc(powerpercent))
+
+highpercent <- filter(percentorganized,powerpercent > 20.00)
+lowpercent <- filter(percentorganized,powerpercent < 20.00)
+
+highpercentcountries <- filter(sectordata,country %in% highpercent$country)
+lowpercentcountries <- filter(sectordata,country %in% lowpercent$country)
+```
+
+```{r echo=FALSE}
 numerichighsector <- select(highsectordata, -c(country,date,timestamp))
 cor(numerichighsector)
 
@@ -50,13 +128,12 @@ ggplot(highsectorcoors,aes(x= Var1, y = Var2,fill=value))+
   geom_tile()+
   scale_fill_gradient2(low = "red", high = "blue", mid = "white",
                        midpoint = 0.85)+
-  labs(title= "Correlation between sectors for high emitting countries (per person)")+
-  theme(axis.text.x = element_text(angle = 90))
+  labs(title= "Correlation between sectors for high emitting countries (per person)")+ theme(axis.text.x = element_text(angle = 90))
 ```
 
 This plot shows the correlation between the different sectors for countries that emit higher amounts per person. One noticeable thing is that power, industry and ground transport are all heavily correlated with each other while both the aviations (domestic and international) are correlated with each other. Out of all the variables, residential seems to be the least correlated with the other sectors, noticeably having a lower correlation with the 2 aviations
 
-```{r}
+```{r echo=FALSE}
 numericlowsector <- select(lowsectordata, -c(country,date,timestamp))
 cor(numericlowsector)
 
@@ -75,7 +152,7 @@ ggplot(lowsectorcoors,aes(x= Var1, y = Var2,fill=value))+
 
 This plot shows the correlation between the sectors for the countries that emit lower amounts per person. Compared to the high emitting countries this plot looks a lot messier and there are barely any sectors that are highly correlated with each other. compared to the high emissions, this plot is more spread out and there isn't that many noticeable spots of high or low correlation
 
-```{r}
+```{r echo=FALSE}
 numerichighpercent <- select(highpercentcountries, -c(country,date,timestamp))
 cor(numerichighpercent)
 
@@ -93,9 +170,9 @@ ggplot(highpercentcoors,aes(x= Var1, y = Var2,fill=value))+
 
 ```
 
-This is the correlation plot for high emitting countries by percent of total emissions. These countries have the highest percentage of total emissions as power. Its very similar to the one earlier which is good news since it shows that the trends I found earlier is consistent.
+This is the correlation plot for high emitting countries by percent of total emissions. These countries have the highest percentage of total emissions as power. Its very similar to the one earlier which is good news since it shows that the trends I found earlier is consistent. Like the numeric values from the high correlation plot earlier most of the correlations are around .9 or higher and it only goes down to around .75 at its lowest
 
-```{r}
+```{r echo=FALSE}
 numericlowpercent <- select(lowpercentcountries, -c(country,date,timestamp))
 cor(numericlowpercent)
 
@@ -112,7 +189,7 @@ ggplot(lowpercentcoors,aes(x= Var1, y = Var2,fill=value))+
   theme(axis.text.x = element_text(angle = 90))
 ```
 
-This plot shows the correlations between the sectors for the countries that don't have power as a large percentage of their overall emissions. Like the high emissions plot this is also very similar to the one from earlier which shows that the trends are true here as well.
+This plot shows the correlations between the sectors for the countries that don't have power as a large percentage of their overall emissions. Like the high emissions plot this is also very similar to the one from earlier which shows that the trends are true here as well. Also like the low correlation plot earlier the correlation values are a lot lower, compared to the higher values earlier most of these values are around .7-.85. This time only one correlation is above .9 and there are even some that go down to .52 .
 
 ## Discussion
 
