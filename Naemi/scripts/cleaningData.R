@@ -56,7 +56,8 @@ upper # 1.095752
 # year/value
 ggplot(data = data, aes(x = year, y = value, fill = year)) +
   geom_bar(stat = "summary",
-           fun = "mean") #value ofc drops in 2020
+           fun = "mean") 
+  ggtitle("Carbon Emissions from 2019 - 2023")#value ofc drops in 2020
 
 ggplot(data = data, aes(x = year, y = value, color = sector)) +
   geom_bar(stat = "summary",
@@ -66,7 +67,11 @@ ggplot(data = data, aes(x = date, y = value, color = sector)) +
   geom_point() #super messy can't tell
 
 #power
-#power <- filter(data, sector == "Power")
-#ggplot(data = power, aes(x = date, y = value)) +
-  #geom_line(stat = "summary",
-          #  fun = "mean")
+filter(data, sector == "Power")
+ggplot(data = data, aes(x = date, y = value)) +
+  geom_bar(stat = "summary",
+            fun = "mean")
+
+ggplot(data = data, aes(x = year, y = value)) +
+  geom_bar(stat = "summary",
+           fun = "mean")
