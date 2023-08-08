@@ -1,5 +1,6 @@
 # Reading in Data 
 Eu_co2 = read.csv("Data/carbonmonitor-eu_datas_2023-07-19.csv")
+population = read.csv("Data/worldbank_population_bycountry - data.csv")
 
 ## Load in packages ####
 library(lubridate)
@@ -169,3 +170,14 @@ ggplot(data = reg_results, aes( x = boost_pred ,  y = reg_results$timestamp)) +
     
   )  + 
   theme_minimal()
+
+
+# EU population 
+
+new_pop = population |>
+  filter(country != c("EU27 & UK", "United Kingdom" ) ) |>
+  select(-c(country))
+
+ggplot(new_pop, aes( x = year, y = population, fill = year)) +
+  geom_bar(stat = "sum", na.rm = FALSE)
+
