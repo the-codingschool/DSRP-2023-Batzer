@@ -1,0 +1,241 @@
+# The unlikeliness of the European Union to achieve the Green Deal Intermediate Goal
+
+Moné Abbott
+
+## Abstract
+
+With the looming threat of climate change hanging overhead, many countries are taking steps to decrease their carbon footprint. The European Union, being no different, chose to implement a plan called the Green Deal. I intend to investigate whether or not the terms the European Union set out for themselves are attainable, and if so, how probable. To answer my question, I've evaluated emission trends, both annually and daily, and developed a regression model to produce an emissions prediction. Through analyzing the emissions trends, we found that the EU (European Union) has a probable chance of not hitting its emissions target but instead experiencing a positive emissions trend. The goal of this investigation is to encourage realistic climate policy and plans to ensure global net zero emissions.
+
+## Background
+
+Unveiled in 2019 by the President of the European Commission, Ursula von der Leyen, the European Green Deal stands to be the most ambitious program created by the European Union. The deal encompasses a 30-year plan with the end goal of achieving Net Zero Europe [Enel]. Within the 30-year plan, there is an intermediate goal of slashing emissions to 55% of the 1990 EU (European Union) carbon emissions (computing to a total of around 4573.9435 MT) by 2030. This led to my questioning the likelihood of the European Union achieving the 2030 emissions goal. Going into my research, I went in with a layer of skepticism, with my hypothesis being that there's a low likelihood of the EU achieving the Green Deal intermediate goal. The data used in my research was collected by the Carbon Monitor Europe team and is hosted at [eu.carbon.monitor.org](http://eu.carbon.monitor.org/). To answer my specific research question, the dataset was modified to exclude data from the United Kingdom, given the country's official exit from the EU in 2021. Additionally, due to irregularities in the data, the years 2020 and 2023 were removed from the dataset. With the remaining data, a regression model will be trained to help inform a prediction on what EU emissions will look like by the year 2030.
+
+## Results
+
+```{r setup}
+ # Read in Data 
+Eu_co2 = read.csv("Data/carbonmonitor-eu_datas_2023-07-19.csv")
+
+## Load in packages ####
+library(lubridate)
+library(tidyr)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+library(ranger)
+library(reshape2)
+library(yardstick)
+library(Metrics)
+
+# Creating Numeric Data set & Preping the dataset ####
+
+carbon_numeric = Eu_co2 |>
+  # Adding year column
+  mutate(Eu_co2, year = format(as.POSIXct(Eu_co2$timestamp, 
+                                          origin = "1970-01-02)"), "%Y"))|> 
+  #Removing 2020 & 2023 + Removing Uk and Eu27 & UK 
+  filter(
+    country != "EU27 & UK",
+    country != "United Kingdom",
+    year != "2023",
+    year != "2020"
+  ) |>
+  #expanding the sectors out 
+  pivot_wider(
+    names_from = sector,
+    values_from = value)
+
+# Removing country, date & year 
+carbon_numeric = carbon_numeric |>
+  select(-c(country, date, year))
+           
+# Grouping the data by the timestamp & adding the sectors in that are combined
+carbon_numeric = carbon_numeric |>
+  group_by(timestamp) |>
+  summarise(across(c(Power, Industry, `Ground Transport`, `Residential`, `Domestic Aviation`, `International Aviation`), sum))
+
+# Converting everything to numeric 
+carbon_numeric = carbon_numeric |>
+  mutate(timestamp = as.numeric(timestamp))
+
+```
+
+*Figure 1: Total European Union Emissions per year (2019 - 2023)*
+
+```{r}
+no_uk_carbon = Eu_co2 |> 
+  filter(country != "United Kingdom") |>
+  filter(country != "EU27 & UK") 
+  
+no_uk_carbon = mutate( year = format(as.POSIXct(no_uk_carbon$timestamp, origin = "1970-01-02)"), "%Y"))
+
+
+ggplot( data = no_uk_carbon, aes( x = year, y = value, fill = year)) + 
+  geom_bar(stat = "sum", na.rm = FALSE) + 
+  labs(
+    title = "Total European Union Emissions per year (2019 - 2023)",
+    y = "Emissions (MT CO2)",
+    x = "Year"
+  ) + 
+  theme_minimal()
+```
+
+The annual emissions from the 4 years supplied in the data-set, from 2019 to 2023, served as the basis for analysis of the trends underlying EU carbon emissions. From 2019 to 2022, the graph shows an upward tendency; from 2021 to 2022, the development becomes a little more slow. The irregularity of 2020 (the year lock-downs were in place) and the inadequacy of the 2023 data were also depicted in this graph. enabling me to decide, after additional consideration, whether to exclude data from both years from the data-set.
+
+*Figure 2 : Total Emissions by day in the Eu (2019-2023)*
+
+```{r}
+# Creating carbon data set  
+carbon = Eu_co2 |>
+  pivot_wider(
+    names_from = sector,
+    values_from = value) |>
+  filter(country != "EU27 & UK" )|>
+  select(-c(country, date))
+
+
+carbon = carbon |>
+  group_by(timestamp) |>
+  summarise(across(c(Power, Industry, `Ground Transport`, `Residential`, `Domestic Aviation`, `International Aviation`), sum)) |>
+  mutate(
+    total_em = Power + Industry + `Ground Transport`+ Residential +
+      `Domestic Aviation` + `International Aviation`
+  ) 
+  
+# Plotting
+ggplot(data = carbon, aes(x = carbon$timestamp, y = carbon$total_em)) +
+  geom_point()+
+  geom_smooth( color = "#6aa84fff" , se=FALSE) +
+  labs(
+    title = "Total Emissions by day in the European Union (2019-2023)",
+    x = "Seconds Since 1970/01/02",
+    y = "Total Emissions / MtCO2"
+  ) +
+  theme_minimal()
+```
+
+The total daily emissions of the EU are shown in this graph for the four-year period (2019-2023). There is a line of best fit in this graph that aims to represent the relationship between the day and the overall amount of carbon emissions in the EU. This line's general shape mimics that of a conventional cosine function, with its minimum occurring in the middle of 2020 and its maximum occurring in January 2019. Overall, despite the variations, the graphs show a positive trend that suggests a slow rise in carbon emissions.
+
+*Figure 3: Regression Model RMSE score comparisons*
+
+```{r}
+reg_split = initial_split(carbon_numeric, prop = .75)
+
+# making training & testing data set 
+reg_train = training(reg_split)
+reg_test = testing(reg_split)
+
+## Linear Regression ####
+lm_fit = linear_reg() |>
+  set_engine("lm") |>
+  set_mode("regression") |> 
+  fit(timestamp ~ Power + Industry + ., data = reg_train)
+
+
+# Boosted Trees!! 
+boosted_reg_fit = boost_tree() |>
+  set_engine("xgboost") |>
+  set_mode("regression") |> 
+  fit(timestamp ~ Power + Industry + ., data = reg_train)
+
+
+### Evaluation ####
+reg_results = reg_test
+
+## accuracy calculations 
+reg_results$lm_pred = predict(lm_fit, reg_test)$.pred
+reg_results$boost_pred = predict(boosted_reg_fit, reg_test)$.pred
+
+linear_REg = yardstick::rmse(reg_results, timestamp, lm_pred)
+Boost_T = yardstick::rmse(reg_results, timestamp, boost_pred)
+
+### Making Data frame 
+model_comparison = data.frame(linear_REg, Boost_T)
+
+
+
+model_comparison_1 = model_comparison |>
+  rename(`Linear Regression` = .estimate ) |>
+  rename(`Boosted Tree` = .estimate.1) |>
+  pivot_longer( cols = c(`Linear Regression` , `Boosted Tree` ), names_to = "RMSE", values_to ="values"
+  ) 
+  
+# Plotting Data 
+ggplot(model_comparison_1, aes( x = RMSE, y = model_comparison_1$values)) + 
+  geom_bar(fill = "#6aa84fff", stat = "summary") + 
+  labs(
+    title = "Regression Model RMSE score comparisons",
+    x = "Regression Model",
+    y = "Root Means Sqaure Error Score"
+  ) + 
+  theme_minimal()
+  
+```
+
+The root mean square error (RMSE) value for the boosted tree and linear model are compared in the figure. By calculating the average gaps between the model's predicted values and the actual values, RMSE evaluates how well a regression model fits a data-set. The regression model is better matched to the data-set the lower the RMSE of the model [statology]. As seen, the boosted tree model offers a lower RMSE out of 2, making it the model that fits the data-set more accurately.
+
+*Figure 4: Boosted Tree Predictions v. Time-stamps*
+
+```{r}
+ggplot(data = reg_results, aes( x = boost_pred ,  y = reg_results$timestamp)) +
+  geom_point()+
+  geom_smooth(color = "#6aa84fff") + 
+  labs(
+    title = "Boosted Tree Predictions v. Timestamps",
+    x = "Boosted Tree Predicitons",
+    y = "Actual Timestamp"
+    
+  )  + 
+  theme_minimal()
+```
+
+In this plot, the real timestamp data provided to the model from the testing data are displayed against the predicted timestamps made by the Boosted Tree Regression model. With the exception of a few significant outliers, the points appear to follow an almost linear function as shown by the line of best fit (green line). The bulk of predictions are extremely accurate and fall within the confidence interval of the line (shaded gray area). The outcomes shown in this visualization are consistent with those shown by the RMSE.
+
+*Figure 5: Linear Model Predictions v. Time-stamps*
+
+```{r}
+ggplot(data = reg_results, aes( x = lm_pred ,  y = reg_results$timestamp)) +
+  geom_point()+
+  geom_smooth(color = "#6aa84fff") + 
+  labs(
+    title = "Linear Model Predictions v. Timestamps",
+    x = "Linear Regression Predicitons",
+    y = "Actual Timestamp"
+  
+  ) +
+  theme_minimal()
+```
+
+While in this plot, the projected time-stamps from the linear regression model are compared to the actual time-stamp data given to the model from the testing data set. There are two distinct point clusters in this plot that can be seen both below and above the line of best fit (the green line). The projections are frequently very far from the actual data in both clusters. The time-stamps are difficult for the linear regression model to forecast, in turn.
+
+## Discussion
+
+Due to numerous issues with using the Regression models to make a reliable prediction and a time constraint, I chose to base my conclusion on the trend lines shown in Figures 1 and 2. Thus, it is clear from an analysis of the trends in whatever total emissions is designated] that the EU is expected to have a positive emissions trend, which would result in an increase in the EU's overall emissions. Consequently, the likelihood that the EU will achieve its intermediate goal is fairly low. The EU must make significant efforts to reduce its annual emissions in order to stay on track to meet the Green Deal Net Zero goal. If these efforts are not implemented effectively and promptly, the EU will not only miss its goal but will also be unable to contribute to the effort to mitigate the effects of climate change. With the results shown, which support my initial theory that there is a very low possibility that the EU will achieve the goals of the Green Deal intermediate aim, The next stage would be to use the trained model to generate predicted emissions amount for the EU in the year 2030 in order to further support the findings I made in the study paper. And to do a T-test on the number predicted by the model to verify the prediction's correctness.
+
+## Uncertainty
+
+In this analysis, a major point of uncertainty stems from the lack of data prior to 2019, which severely restricts the regression model's ability to accurately predict the emissions trends of the EU. Additionally, the removal of 2020 and 2023 is due to the abnormality of 2020 and the incompleteness of 2023. Further cuts the data, reducing the available training data from 1581 observations (rows) to 1095 observations. Additionally, my analysis fails to take into account the increasing European population, with the EU population growing at a steady 0.2% as of 2022 [World Bank]. Given that a direct relationship exists between a country's population and its carbon emissions, Such population growth could be at fault for the upward trend in annual carbon emissions.
+
+## Code & Availability
+
+R code used in producing the results for the research question is available at <https://github.com/the-codingschool/DSRP-2023-Batzer/tree/main/Mone>
+
+## Acknowledgments
+
+I would like to acknowledge
+
+-   Dr. Batzer
+
+-   Alex Dong
+
+-   Sarah Parker
+
+-   The Coding School
+
+## References 
+
+\"The European Green Deal: what it is, benefits and actions.\" Enel Group, 17 April 2023, <https://www.enel.com/company/stories/articles/2023/04/european-green-deal.> Accessed 6 August 2023.
+
+\"How to Interpret Root Mean Square Error (RMSE).\" Statology, 10 May 2021, <https://www.statology.org/how-to-interpret-rmse/.> Accessed 6 August 2023.
+
+\"Population growth (annual %) - European Union \| Data.\" World Bank Data, <https://data.worldbank.org/indicator/SP.POP.GROW?locations=EU.> Accessed 5 August 2023.
