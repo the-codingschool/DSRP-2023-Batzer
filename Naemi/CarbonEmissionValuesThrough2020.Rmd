@@ -1,0 +1,158 @@
+---
+title: "CarbonEmissionValuesThrough2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### **Abstract**   
+  My research question is which sectors influenced carbon emissions the most and how has this changed during the pandemic (2020)? I decided to go with this research question because I wanted to determine what factors can be applicable to help our planet today.  
+  As for how I approached the data, I seperated the date column into month and year, added a column for lockdown severity, and lastly added the population of each country. I used a t-test for countries with a national lockdown or localised and below in 2020.   
+  For my p-value I got 2.2e-16 which tells me that there is a significant difference in between the two variables. These results show that power is the most influential sector.   The pandemic had a greater impact on more populated countries than those that don’t. Additionally, those populated countries have stricter lockdown, resulting in a more obvious change in power.  
+
+
+### **Background**   
+  This topic is important because climate change is a big issue which carbon emissions contribute too. Since 2020 was the pandemic, people did not go out, stayed in the country, and traveled less. Clearly as a result, less power is used and there is smaller value in 2020. Therefore, I decided to look deeper into this as my research question which was, which sectors influenced carbon emissions the most and how has this changed during the pandemic (2020)? The hypothesis would be that power is the most influential sector and countries with stricter lockdowns produce less emissions than those with lighter ones.  
+  The data frame I'm using which tells me the values of each country and what date it was recorded. I also used BBC to rank countries in terms of lockdown severity.   
+  “Coronavirus: The World in Lockdown in Maps and Charts.” BBC News, 6 Apr. 2020, www.bbc.com/news/world-52103747.   
+  
+
+### **Results**   
+Cleaning the data set:  
+```{r, echo = F}
+## loading in libraries ####
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(janitor)
+## reading data ####
+data <- read.csv("Data/carbonmonitor-eu_datas_2023-07-19.csv")
+View(data)
+
+#year column
+data <- data %>%
+  mutate(year = case_when(
+    endsWith(date, "19") ~ 2019,
+    endsWith(date, "20") ~ 2020,
+    endsWith(date, "21") ~ 2021,
+    endsWith(date, "22") ~ 2022,
+    endsWith(date, "23") ~ 2023))
+
+#month column
+data <- separate(data,
+         date,
+         into = c("date", "month"),
+         sep = "/") # what is seperated
+
+
+# replacing zeroes with mean 
+data$value <- replace(data$value, data$value == 0, mean(data$value))
+
+```
+
+This graph shows the change in carbon emissions from 2019 to 2023. There is a dip in the year 2020.
+
+```{r, echo = F}
+ggplot(data = data, aes(x = year, y = value, fill = year)) +
+  geom_bar(stat = "summary",
+           fun = "mean") 
+  ggtitle("Carbon Emissions from 2019 - 2023")
+
+```
+
+This graph focuses specifically in the change from 2019 to 2020. The difference is 0.0112479.
+```{r, echo = F}
+ggplot(data = difference, aes(x = year, y = value, fill = year)) +
+  geom_bar(stat = "summary",
+           fun = "mean") +
+  ggtitle("Difference between 2019 and 2020") 
+
+```
+
+In order to tell which sector has the greatest influence I seperated the graphs by sector and looked at the value every month during 2020
+```{r, echo = F}
+twenty <- filter(data, year == "2020")
+ggplot(data = twenty, aes(x = month, y = value, color = sector)) +
+  geom_line() +
+  facet_wrap(~sector) +
+  theme_minimal() +
+  ggtitle("Month vs Value in 2020")
+```
+
+In order to tell which sector has the greatest influence I seperated the graphs by sector and looked at the value every month during 2019
+```{r, echo = F}
+nineteen <- filter(data, year == "2019")
+
+ggplot(data = nineteen, aes(x = month, y = value, color = sector)) +
+  geom_line() +
+  facet_wrap(~sector) +
+  theme_minimal() +
+  ggtitle("Month vs Value in 2019")
+
+```
+
+I conducted a t-test on countries with national lockdown against localised and below in 2020. This the graph of results with countries with national lockdowns higher than localised.
+
+```{r, echo = F}
+twenty <- filter(twenty, !is.na(lock_severe))
+
+ggplot(data = twenty, aes(x = lock_severe, y = value)) +
+  geom_bar(stat = "summary",
+           fun = "mean") +
+  stat_summary(fun.data = 'mean_se',
+               geom = 'errorbar',
+               width = 0.2)
+  ggtitle("Strict vs. Lighter??")
+```
+
+I was not expecting countries with national lockdown to have a higher emission mean so I conducted the test again while taking their populations into account. As a result we get less of a significant difference between the two variables shown by the graph below.
+```{r, echo = F}
+strictlightdif <- data.frame(lockdown = c("light", "strict"),
+                             value = c(1.243832e-06, 1.582425e-06)
+                             )
+strictlightdif
+
+ggplot(data = strictlightdif, aes(x = lockdown, y = value, fill = lockdown)) +
+  geom_bar(stat = "summary",
+           fun = "mean") +
+  ggtitle("Strict vs. Lighter")
+```
+
+Lastly, I compared the values of countries depending on lockdown severity from 2019 to 2020. Based on the results I can conclude that countries with stricter lockdowns have more of an impact from the pandemic than the lighter ones which weren't significantly affected.  
+```{r, echo = F}
+ninetotwenty <- data.frame(change = c("strictNine", "strictTwenty", "lightNine", "lightTwenty"),
+                           value = c(899.6906, 776.6971, 35.39567, 29.78524))
+
+ninetotwenty
+ggplot(data = ninetotwenty, aes(x = change, y = value, fill = change)) +
+  geom_bar(stat = "summary",
+           fun = "mean") +
+  ggtitle("Strict vs. Lighter through 2019 - 2020")
+
+```
+
+
+### **Discussion**  
+From the data I can conclude that power had the greatest influence on carbon emissions. Additionally, those populated countries have a stricter lockdown, resulting in a more obvious change in power. This shows how populated countries have stricter lockdowns compared to less popular ones. This is important because, it demonstrates how we can limit carbon emissions considerably by limiting people. We can possibly implement light restrictions on power use to lower carbon emissions. I originally expected countries with stricter lockdowns to have a lower emission mean then the ones with lighter ones. This was because I didn't take the population of each country into account. As a result, it negated my original hypothesis. If I had more time I would research other policies and limitations that took place besides lockdowns. I would also focus on other sectors besides power and go into depth in each individual country.
+
+
+### **Code and Data Availability**   
+GitHub Repository: https://github.com/the-codingschool/DSRP-2023-Batzer/tree/main/Naemi
+Carbon Emission Data: https://eu.carbonmonitor.org/
+Population Data: The population data comes from world bank
+
+### **Acknowledgements**    
+**The Coding School**
+For giving me this opportunity to explore R
+
+**Dr. Evan Batzer**
+For helping me explore carbon emissions and provide important feedback
+
+**TA Alex Dong**
+Giving feedback throughout the process.
+
+
+
+
+
+
